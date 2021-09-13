@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <driver/adc.h>
 
+#include "credentials.h"
 #include "esp_adc_cal.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
@@ -9,6 +10,7 @@
 // eink.
 #include "eink/display.h"
 #include "eink/logger.h"
+#include "eink/wifi.h"
 
 #define BATT_PIN 36
 
@@ -118,7 +120,13 @@ void correct_adc_reference() {
 eink::Display *display;
 
 void setup() {
+  auto &logger = eink::Logger::Get();
+
   // Serial.begin(115200);
+  if (eink::WiFiBegin(kWiFiSSID, kWiFiPass) != 0) {
+    logger.Printf("Unable to connect to WiFi. Sleeping.\n");
+    start_deep_sleep_with_wakeup_sources();
+  }
 
   display = new eink::Display();
 
@@ -149,6 +157,8 @@ void setup() {
     //       deepsleep";
     //   display_center_message(message);
   }
+
+  eink::WiFiDisconnect();
 }
 
 void loop() {
