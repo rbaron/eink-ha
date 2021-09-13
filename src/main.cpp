@@ -8,6 +8,7 @@
 
 // eink.
 #include "eink/display.h"
+#include "eink/logger.h"
 
 #define BATT_PIN 36
 
@@ -113,10 +114,11 @@ void correct_adc_reference() {
   }
 }
 
+// eink::Logger *logger;
 eink::Display *display;
 
 void setup() {
-  Serial.begin(115200);
+  // Serial.begin(115200);
 
   display = new eink::Display();
 
@@ -124,6 +126,7 @@ void setup() {
 
   print_wakeup_reason();
 
+  eink::Logger::Get().Printf("Hello, world instance\n");
   display->DrawRect(30, 30, 40, 40, 127);
   display->DrawText(60, 30, "Hello, world", 30, eink::FontSize::Size12);
   display->Update();
@@ -154,9 +157,9 @@ void loop() {
    * Basically almost no battery usage then until next wakeup.
    */
   if (esp_timer_get_time() > maxTimeRunning) {
-    //   Serial.println(
-    //       "Max runtime of 30s reached. Forcing deepsleep now to save
-    //       energy");
+    // Serial.println(
+    //     "Max runtime of 30s reached. Forcing deepsleep now to save
+    //     energy");
     //   display_center_message(
     //       "Sleeping now.\nWake me up from deepsleep again\nwith the first
     //       button " "on my side");
