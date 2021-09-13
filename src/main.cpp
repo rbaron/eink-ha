@@ -10,6 +10,7 @@
 // eink.
 #include "eink/display.h"
 #include "eink/logger.h"
+#include "eink/prst.h"
 #include "eink/wifi.h"
 
 #define BATT_PIN 36
@@ -127,6 +128,11 @@ void setup() {
     logger.Printf("Unable to connect to WiFi. Sleeping.\n");
     start_deep_sleep_with_wakeup_sources();
   }
+
+  eink::PRST prst;
+  prst.Connect(kMQTTBrokerAddr, kMQTTBrokerUser, kMQTTBrokerPass);
+  prst.SubscribeToAll();
+  prst.WaitAllMessages();
 
   display = new eink::Display();
 

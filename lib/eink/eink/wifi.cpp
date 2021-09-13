@@ -17,7 +17,7 @@ int WiFiBegin(const char* SSID, const char* password) {
       return -1;
     }
   }
-  Logger::Get().Printf("Connected to WiFi: %s\n!",
+  Logger::Get().Printf("Connected to WiFi: %s!\n",
                        WiFi.localIP().toString().c_str());
   return 0;
 }
