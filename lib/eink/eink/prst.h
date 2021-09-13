@@ -4,7 +4,7 @@
 #include <PubSubClient.h>
 #include <WiFiClient.h>
 
-#define EINK_PRST_WAIT_TIMEOUT_MS 6000
+#define EINK_PRST_WAIT_TIMEOUT_MS 10000
 
 namespace eink {
 

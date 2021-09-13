@@ -6,12 +6,22 @@
 
 namespace eink {
 namespace {
+
+static int nParasiteFound = 0;
+
 // Callback for MQTT topics.
 void mqttCallback(const char *topic, uint8_t *payload, unsigned int length) {
   const auto &logger = Logger::Get();
-  std::string p((char *)payload, length);
-  logger.Printf("Got payload from %s\n", topic);
-  logger.Printf("Payload: %s\n", p.c_str());
+  // if (subs)
+  std::string t(topic);
+  if (t.find("soil_moisture") == t.npos) {
+    return;
+  }
+  nParasiteFound++;
+  logger.Printf("Found another parasite: %d (%s))\n", nParasiteFound, topic);
+  // std::string p((char *)payload, length);
+  // logger.Printf("Got payload from %s\n", topic);
+  // logger.Printf("Payload: %s\n", p.c_str());
 }
 }  // namespace
 
@@ -34,13 +44,16 @@ boolean PRST::Connect(const char *mqtt_host, const char *mqtt_user,
 }
 
 boolean PRST::SubscribeToAll() {
-  boolean res = pubsub_.subscribe(
-      "homeassistant/sensor/co2sensors/dark_ficus_soil_moisture/#");
-  res = pubsub_.subscribe(
-      "homeassistant/sensor/co2sensors/mh-z19_co2_value/config");
-  res = pubsub_.subscribe("test");
-  Logger::Get().Printf("Subscribed: %d\n", res);
-  // pubsub_.subscribe("#");
+  boolean res = pubsub_.subscribe("homeassistant/sensor/co2sensors/#");
+  if (!res) {
+    Logger::Get().Printf("Error subscribing");
+    return false;
+  }
+  res = pubsub_.subscribe("homeassistant/sensor/hall_bridge/#");
+  if (!res) {
+    Logger::Get().Printf("Error subscribing");
+    return false;
+  }
   return true;
 }
 
@@ -50,7 +63,7 @@ boolean PRST::WaitAllMessages() {
   while (millis() - t0 < EINK_PRST_WAIT_TIMEOUT_MS) {
     pubsub_.publish("test", "loop");
     pubsub_.loop();
-    delay(200);
+    delay(50);
   }
 
   logger.Printf("Timeout waiting for PRST msgs\n.");
