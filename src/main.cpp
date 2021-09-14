@@ -1,18 +1,20 @@
 #include <Arduino.h>
 #include <driver/adc.h>
+#include <time.h>
 
 #include <sstream>
 
 #include "credentials.h"
 #include "esp_adc_cal.h"
-#include "esp_heap_caps.h"
-#include "esp_log.h"
+// #include "esp_heap_caps.h"
+// #include "esp_log.h"
 #include "esp_sleep.h"
 
 // eink.
 #include "eink/display.h"
 #include "eink/ha_client.h"
 #include "eink/logger.h"
+#include "eink/time.h"
 #include "eink/wifi.h"
 
 #define BATT_PIN 36
@@ -130,12 +132,17 @@ void correct_adc_reference() {
 }
 
 // eink::Logger *logger;
-eink::Display *display;
+// eink::Display *display;
 
 void setup() {
   auto &logger = eink::Logger::Get();
 
-  // Serial.begin(115200);
+  eink::ConfigNTP();
+
+  correct_adc_reference();
+
+  print_wakeup_reason();
+
   if (eink::WiFiBegin(kWiFiSSID, kWiFiPass) != 0) {
     logger.Printf("Unable to connect to WiFi. Sleeping.\n");
     start_deep_sleep_with_wakeup_sources();
@@ -143,31 +150,33 @@ void setup() {
 
   eink::HAClient hacli(kHomeAssistantAPIUrl, kHomeAssistantToken);
   std::vector<eink::SoilMoisture> soil_moistures = hacli.FetchSoilMoisture();
-  // prst.Connect(kMQTTBrokerAddr, kMQTTBrokerUser, kMQTTBrokerPass);
-  // prst.SubscribeToAll();
-  // prst.WaitAllMessages();
 
-  display = new eink::Display();
+  eink::Display display;
+  display.Clear();
 
-  correct_adc_reference();
+  struct tm t = eink::GetCurrentTime();
+  logger.Printf("Now: %s\n", eink::FormatTime(t).c_str());
+  time_t now = eink::ToEpoch(t);
 
-  print_wakeup_reason();
-
-  eink::Logger::Get().Printf("Hello, world instance\n");
-  display->DrawRect(30, 30, 40, 40, 127);
-  display->DrawText(60, 30, "Hello, world", 30, eink::FontSize::Size12);
+  std::string tstring = eink::FormatTime(t);
+  display.DrawText(20, EPD_HEIGHT - kPadding, tstring.c_str(), 0,
+                   eink::FontSize::Size12, eink::DrawTextDirection::RTL);
 
   for (int i = 0; i < soil_moistures.size(); i++) {
     const eink::SoilMoisture &s = soil_moistures[i];
-    int y = 100 + 30 * i;
-    display->DrawText(y, kPadding, s.name.c_str(), 0, eink::FontSize::Size12);
+    int y = 150 + 30 * i;
+    display.DrawText(y, kPadding, s.name.c_str(), 0, eink::FontSize::Size12);
 
     std::string val = to_string_with_precision(s.value, 0) + "%";
-    display->DrawText(y, EINK_DISPLAY_HEIGHT - kPadding, val.c_str(), 0,
-                      eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+    display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding, val.c_str(), 0,
+                     eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+
+    std::string time = eink::ToHumanDiff(now - s.last_updated);
+    display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding - 100, time.c_str(), 0,
+                     eink::FontSize::Size12, eink::DrawTextDirection::RTL);
   }
 
-  display->Update();
+  display.Update();
 
   esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
   if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {

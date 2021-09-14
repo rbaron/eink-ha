@@ -24,6 +24,7 @@ class Display {
   Display(const Display&) = delete;
   Display& operator=(const Display&) = delete;
 
+  void Clear();
   void DrawRect(int y, int x, int h, int w, uint8_t color);
   void DrawText(int y, int x, const char* text, uint8_t color, FontSize size);
   void DrawText(int y, int x, const char* text, uint8_t color, FontSize size,

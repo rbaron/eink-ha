@@ -1,8 +1,8 @@
 #ifndef __EINK_HACLIENT_H__
 #define __EINK_HACLIENT_H__
 
-#include <PubSubClient.h>
 #include <WiFiClient.h>
+#include <time.h>
 
 #define EINK_HACLIENT_WAIT_TIMEOUT_MS 10000
 
@@ -11,6 +11,7 @@ namespace eink {
 struct SoilMoisture {
   std::string name;
   double value;
+  time_t last_updated;
   std::string error;
 };
 

@@ -6,6 +6,7 @@
 #include <string>
 
 #include "eink/logger.h"
+#include "eink/time.h"
 
 #define EINK_HA_CLIENT_HTTP_RESP_SIZE 100000
 
@@ -24,7 +25,12 @@ SoilMoisture ParseSoilMoisture(const JsonObject& entity) {
   } else {
     s.value = entity["state"].as<double>();
   }
-  LOG("%s: %f (error: %s)\n", s.name.c_str(), s.value, s.error.c_str());
+
+  struct tm last_updated =
+      ParseISODate(entity["last_updated"].as<const char*>());
+  LOG("%s: %f (error: %s), last updated: %s\n", s.name.c_str(), s.value,
+      s.error.c_str(), FormatTime(last_updated).c_str());
+  s.last_updated = ToEpoch(last_updated);
   return s;
 }
 }  // namespace
