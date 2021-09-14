@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <driver/adc.h>
 
+#include <sstream>
+
 #include "credentials.h"
 #include "esp_adc_cal.h"
 #include "esp_heap_caps.h"
@@ -9,11 +11,13 @@
 
 // eink.
 #include "eink/display.h"
+#include "eink/ha_client.h"
 #include "eink/logger.h"
-#include "eink/prst.h"
 #include "eink/wifi.h"
 
 #define BATT_PIN 36
+
+constexpr int kPadding = 10;
 
 /**
  * Upper most button on side of device. Used to setup as wakeup source to start
@@ -103,6 +107,14 @@ void print_wakeup_reason() {
   }
 }
 
+template <typename T>
+std::string to_string_with_precision(const T value, const int n = 0) {
+  std::ostringstream out;
+  out.precision(n);
+  out << std::fixed << value;
+  return out.str();
+}
+
 /**
  * Correct the ADC reference voltage. Was in example of lilygo epd47 repository
  * to calc battery percentage
@@ -129,10 +141,11 @@ void setup() {
     start_deep_sleep_with_wakeup_sources();
   }
 
-  eink::PRST prst;
-  prst.Connect(kMQTTBrokerAddr, kMQTTBrokerUser, kMQTTBrokerPass);
-  prst.SubscribeToAll();
-  prst.WaitAllMessages();
+  eink::HAClient hacli(kHomeAssistantAPIUrl, kHomeAssistantToken);
+  std::vector<eink::SoilMoisture> soil_moistures = hacli.FetchSoilMoisture();
+  // prst.Connect(kMQTTBrokerAddr, kMQTTBrokerUser, kMQTTBrokerPass);
+  // prst.SubscribeToAll();
+  // prst.WaitAllMessages();
 
   display = new eink::Display();
 
@@ -143,6 +156,17 @@ void setup() {
   eink::Logger::Get().Printf("Hello, world instance\n");
   display->DrawRect(30, 30, 40, 40, 127);
   display->DrawText(60, 30, "Hello, world", 30, eink::FontSize::Size12);
+
+  for (int i = 0; i < soil_moistures.size(); i++) {
+    const eink::SoilMoisture &s = soil_moistures[i];
+    int y = 100 + 30 * i;
+    display->DrawText(y, kPadding, s.name.c_str(), 0, eink::FontSize::Size12);
+
+    std::string val = to_string_with_precision(s.value, 0) + "%";
+    display->DrawText(y, EINK_DISPLAY_HEIGHT - kPadding, val.c_str(), 0,
+                      eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+  }
+
   display->Update();
 
   esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();

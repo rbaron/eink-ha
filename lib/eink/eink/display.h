@@ -13,6 +13,11 @@ enum class FontSize {
   Size12,
 };
 
+enum class DrawTextDirection {
+  LTR,
+  RTL,
+};
+
 class Display {
  public:
   Display();
@@ -21,6 +26,8 @@ class Display {
 
   void DrawRect(int y, int x, int h, int w, uint8_t color);
   void DrawText(int y, int x, const char* text, uint8_t color, FontSize size);
+  void DrawText(int y, int x, const char* text, uint8_t color, FontSize size,
+                DrawTextDirection dir);
   void Update();
 
  private:

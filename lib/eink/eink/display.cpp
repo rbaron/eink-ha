@@ -19,8 +19,17 @@ void Display::DrawRect(int y, int x, int h, int w, uint8_t color) {
 
 void Display::DrawText(int y, int x, const char* text, uint8_t color,
                        FontSize size) {
+  return DrawText(y, x, text, color, size, DrawTextDirection::LTR);
+}
+
+void Display::DrawText(int y, int x, const char* text, uint8_t color,
+                       FontSize size, DrawTextDirection dir) {
+  EpdFontProperties font_props = epd_font_properties_default();
+  if (dir == DrawTextDirection::RTL) {
+    font_props.flags = EPD_DRAW_ALIGN_RIGHT;
+  }
   if (size == FontSize::Size12) {
-    epd_write_default(&FiraSans_12, text, &x, &y, fb_);
+    epd_write_string(&FiraSans_12, text, &x, &y, fb_, &font_props);
   }
 }
 

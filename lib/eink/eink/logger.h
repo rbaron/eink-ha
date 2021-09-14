@@ -7,6 +7,8 @@
 #define EINK_DISPLAY_WIDTH EPD_WIDTH
 #define EINK_DISPLAY_HEIGHT EPD_HEIGHT
 
+#define LOG(...) Logger::Get().Printf(__VA_ARGS__)
+
 namespace eink {
 
 // Singleton logging facility.
