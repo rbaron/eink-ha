@@ -11,6 +11,7 @@ namespace eink {
 
 enum class FontSize {
   Size12,
+  Size16,
 };
 
 enum class DrawTextDirection {
@@ -30,6 +31,7 @@ class Display {
   void DrawText(int y, int x, const char* text, uint8_t color, FontSize size,
                 DrawTextDirection dir);
   void Update();
+  int FontHeight(FontSize f);
 
  private:
   // High level display state.

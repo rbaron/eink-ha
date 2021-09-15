@@ -3,8 +3,21 @@
 #include <Arduino.h>
 
 #include "Firasans.h"
+#include "opensans16.h"
 
 namespace eink {
+namespace {
+
+const EpdFont& GetFont(FontSize size) {
+  switch (size) {
+    case FontSize::Size12:
+      return FiraSans_12;
+    case FontSize::Size16:
+      return OpenSans16;
+  }
+}
+
+}  // namespace
 
 Display::Display() {
   epd_init(EPD_OPTIONS_DEFAULT);
@@ -39,9 +52,7 @@ void Display::DrawText(int y, int x, const char* text, uint8_t color,
   font_props.fg_color = color;
   font_props.bg_color = 0xff;
 
-  if (size == FontSize::Size12) {
-    epd_write_string(&FiraSans_12, text, &x, &y, fb_, &font_props);
-  }
+  epd_write_string(&GetFont(size), text, &x, &y, fb_, &font_props);
 }
 
 void Display::Update() {
@@ -50,6 +61,10 @@ void Display::Update() {
   // delay(500);
   epd_poweroff();
   // delay(1000);
+}
+
+int Display::FontHeight(FontSize f) {
+  return GetFont(f).advance_y;
 }
 
 }  // namespace eink

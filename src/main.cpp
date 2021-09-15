@@ -8,7 +8,9 @@
 #include "esp_adc_cal.h"
 // #include "esp_heap_caps.h"
 // #include "esp_log.h"
+#include "epd_driver.h"
 #include "esp_sleep.h"
+#include "esp_wifi.h"
 
 // eink.
 #include "eink/display.h"
@@ -34,16 +36,16 @@ int vref = 1100;
  * RTC Memory var to get number of wakeups via wakeup source button
  * For demo purposes of rtc data attr
  **/
-RTC_DATA_ATTR int pressed_wakeup_btn_index;
+RTC_DATA_ATTR int runs;
 
-/**
- * That's maximum 30 seconds of runtime in microseconds
- */
-int64_t maxTimeRunning = 30000000;
+struct batt_t {
+  double v;
+  double percent;
+};
 
-double_t get_battery_percentage() {
+batt_t get_battery_percentage() {
   // When reading the battery voltage, POWER_EN must be turned on
-  // epd_poweron();
+  epd_poweron();
 
   delay(50);
 
@@ -67,15 +69,24 @@ double_t get_battery_percentage() {
                    "V which is around " + String(percent_experiment) + "%";
   Serial.println(voltage);
 
+  epd_poweroff();
   delay(50);
 
-  return percent_experiment;
+  batt_t res;
+  res.v = battery_voltage;
+  res.percent = percent_experiment;
+  return res;
 }
 
 void start_deep_sleep_with_wakeup_sources() {
   epd_poweroff();
+  // epd_poweroff_all();
+  esp_wifi_stop();
+  // adc_power_off();
+  adc_power_release();
   delay(400);
-  esp_sleep_enable_ext0_wakeup(FIRST_BTN_PIN, 0);
+  // esp_sleep_enable_ext0_wakeup(FIRST_BTN_PIN, 0);
+  esp_sleep_enable_timer_wakeup(30 * 60 * 1000000);
 
   Serial.println("Sending device to deepsleep");
   esp_deep_sleep_start();
@@ -110,7 +121,7 @@ void print_wakeup_reason() {
 }
 
 template <typename T>
-std::string to_string_with_precision(const T value, const int n = 0) {
+std::string to_fixed_str(const T value, const int n = 0) {
   std::ostringstream out;
   out.precision(n);
   out << std::fixed << value;
@@ -131,11 +142,55 @@ void correct_adc_reference() {
   }
 }
 
-// eink::Logger *logger;
-// eink::Display *display;
+int DrawHeader(eink::Display &display, const struct tm &now, int y) {
+  int text_size = display.FontHeight(eink::FontSize::Size12);
+
+  std::string tstring = eink::FormatTime(now);
+  y += kPadding + text_size;
+  display.DrawText(y, kPadding, tstring.c_str(), 0, eink::FontSize::Size12,
+                   eink::DrawTextDirection::LTR);
+
+  batt_t batt = get_battery_percentage();
+  std::string batt_str = to_fixed_str(batt.v, 2) + " V | " + to_fixed_str(runs);
+
+  display.DrawText(y, EPD_HEIGHT - kPadding, batt_str.c_str(), 0,
+                   eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+  return y;
+}
+
+int DrawWeather(eink::Display &display, time_t now, int y) {}
+
+int DrawSoilMoistures(eink::Display &display,
+                      std::vector<eink::SoilMoisture> soil_moistures,
+                      time_t now, int y) {
+  int header_size = display.FontHeight(eink::FontSize::Size16);
+  int text_size = display.FontHeight(eink::FontSize::Size12);
+
+  display.DrawText(y + header_size + kPadding, kPadding, "b-parasites", 0,
+                   eink::FontSize::Size16);
+  y += header_size + kPadding;
+
+  for (int i = 0; i < soil_moistures.size(); i++) {
+    const eink::SoilMoisture &s = soil_moistures[i];
+    y += kPadding + text_size;
+    display.DrawText(y, kPadding, s.name.c_str(), 0, eink::FontSize::Size12);
+
+    std::string val = to_fixed_str(s.value, 0) + "%";
+    display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding, val.c_str(), 0,
+                     eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+
+    std::string time = eink::ToHumanDiff(now - s.last_updated);
+    display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding - 100, time.c_str(), 0,
+                     eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+  }
+
+  return y;
+}
 
 void setup() {
   auto &logger = eink::Logger::Get();
+
+  adc_power_acquire();
 
   eink::ConfigNTP();
 
@@ -150,31 +205,20 @@ void setup() {
 
   eink::HAClient hacli(kHomeAssistantAPIUrl, kHomeAssistantToken);
   std::vector<eink::SoilMoisture> soil_moistures = hacli.FetchSoilMoisture();
+  // std::vector<eink::SoilMoisture> soil_moistures;
 
   eink::Display display;
   display.Clear();
 
+  // const int header_size = display.FontHeight(eink::FontSize::Size16);
+  // const int text_size = display.FontHeight(eink::FontSize::Size12);
+
   struct tm t = eink::GetCurrentTime();
-  logger.Printf("Now: %s\n", eink::FormatTime(t).c_str());
   time_t now = eink::ToEpoch(t);
 
-  std::string tstring = eink::FormatTime(t);
-  display.DrawText(20, EPD_HEIGHT - kPadding, tstring.c_str(), 0,
-                   eink::FontSize::Size12, eink::DrawTextDirection::RTL);
-
-  for (int i = 0; i < soil_moistures.size(); i++) {
-    const eink::SoilMoisture &s = soil_moistures[i];
-    int y = 150 + 30 * i;
-    display.DrawText(y, kPadding, s.name.c_str(), 0, eink::FontSize::Size12);
-
-    std::string val = to_string_with_precision(s.value, 0) + "%";
-    display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding, val.c_str(), 0,
-                     eink::FontSize::Size12, eink::DrawTextDirection::RTL);
-
-    std::string time = eink::ToHumanDiff(now - s.last_updated);
-    display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding - 100, time.c_str(), 0,
-                     eink::FontSize::Size12, eink::DrawTextDirection::RTL);
-  }
+  int y = 0;
+  y = DrawHeader(display, t, y);
+  y = DrawSoilMoistures(display, soil_moistures, now, y);
 
   display.Update();
 
@@ -198,22 +242,8 @@ void setup() {
   }
 
   eink::WiFiDisconnect();
+  runs++;
+  start_deep_sleep_with_wakeup_sources();
 }
 
-void loop() {
-  /*
-   * Shutdown device after 30s always to conserve battery.
-   * Basically almost no battery usage then until next wakeup.
-   */
-  if (esp_timer_get_time() > maxTimeRunning) {
-    // Serial.println(
-    //     "Max runtime of 30s reached. Forcing deepsleep now to save
-    //     energy");
-    //   display_center_message(
-    //       "Sleeping now.\nWake me up from deepsleep again\nwith the first
-    //       button " "on my side");
-    //   delay(1500);
-
-    start_deep_sleep_with_wakeup_sources();
-  }
-}
+void loop() {}
