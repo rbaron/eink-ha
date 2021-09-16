@@ -12,6 +12,7 @@ namespace eink {
 enum class FontSize {
   Size12,
   Size16,
+  Size24,
 };
 
 enum class DrawTextDirection {

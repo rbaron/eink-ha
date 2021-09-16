@@ -25,6 +25,7 @@ void ConfigNTP() {
 struct tm GetCurrentTime() {
   struct tm t;
   int res = getLocalTime(&t);
+  LOG("Get local time response: %d\n", res);
   return t;
 }
 

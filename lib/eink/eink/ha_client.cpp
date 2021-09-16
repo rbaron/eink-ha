@@ -33,9 +33,26 @@ SoilMoisture ParseSoilMoisture(const JsonObject& entity) {
   s.last_updated = ToEpoch(last_updated);
   return s;
 }
+
+void ParseWeatherData(const JsonObject& entity, Weather& w) {
+  const std::string name = entity["entity_id"].as<std::string>();
+  if (name == "sensor.openweathermapzurich_temperature") {
+    // w.temp = std::atof(entity["state"].as<const char*>());
+    w.temp = entity["state"].as<double>();
+    struct tm last_updated =
+        ParseISODate(entity["last_updated"].as<const char*>());
+    w.last_updated = ToEpoch(last_updated);
+    LOG("TEMP: %f\n", w.temp);
+  } else if (name == "sensor.openweathermapzurich_condition") {
+    w.state = entity["state"].as<std::string>();
+    w.state[0] = std::toupper(w.state[0]);
+    LOG("STATE: %s\n", w.state.c_str());
+  }
+}
+
 }  // namespace
 
-std::vector<SoilMoisture> HAClient::FetchSoilMoisture() {
+HAData HAClient::FetchData() {
   HTTPClient http;
   http.useHTTP10(true);
   std::string url = url_ + "/states";
@@ -51,6 +68,7 @@ std::vector<SoilMoisture> HAClient::FetchSoilMoisture() {
   LOG("JSON: %d\n", doc.size());
 
   std::vector<SoilMoisture> res;
+  Weather weather;
   for (const auto& el : doc.as<JsonArray>()) {
     std::string entity_id(el["entity_id"].as<std::string>());
 
@@ -58,13 +76,20 @@ std::vector<SoilMoisture> HAClient::FetchSoilMoisture() {
         entity_id.find("test") == entity_id.npos) {
       // LOG("Entity ID: %s\n", entity_id.c_str());
       res.push_back(ParseSoilMoisture(el.as<JsonObject>()));
+    } else if (entity_id.find("sensor.openweathermapzurich") !=
+               entity_id.npos) {
+      ParseWeatherData(el.as<JsonObject>(), weather);
     }
   }
   std::sort(res.begin(), res.end(),
             [](const SoilMoisture& lhs, const SoilMoisture& rhs) {
               return lhs.value < rhs.value;
             });
-  return res;
+
+  HAData data;
+  data.soil_moistures = std::move(res);
+  data.weather = std::move(weather);
+  return data;
 }
 
 }  // namespace eink

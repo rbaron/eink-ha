@@ -4,6 +4,7 @@
 
 #include "Firasans.h"
 #include "opensans16.h"
+#include "opensans24.h"
 
 namespace eink {
 namespace {
@@ -14,6 +15,8 @@ const EpdFont& GetFont(FontSize size) {
       return FiraSans_12;
     case FontSize::Size16:
       return OpenSans16;
+    case FontSize::Size24:
+      return OpenSans24;
   }
 }
 
@@ -25,8 +28,6 @@ Display::Display() {
   epd_set_rotation(EPD_ROT_INVERTED_PORTRAIT);
   fb_ = epd_hl_get_framebuffer(&hl_);
   epd_clear();
-
-  epd_fill_circle(20, 20, 10, 0, fb_);
 }
 
 void Display::Clear() {
@@ -58,9 +59,7 @@ void Display::DrawText(int y, int x, const char* text, uint8_t color,
 void Display::Update() {
   epd_poweron();
   epd_hl_update_screen(&hl_, MODE_GC16, 20);
-  // delay(500);
   epd_poweroff();
-  // delay(1000);
 }
 
 int Display::FontHeight(FontSize f) {

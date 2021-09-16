@@ -5,10 +5,8 @@
 #include <sstream>
 
 #include "credentials.h"
-#include "esp_adc_cal.h"
-// #include "esp_heap_caps.h"
-// #include "esp_log.h"
 #include "epd_driver.h"
+#include "esp_adc_cal.h"
 #include "esp_sleep.h"
 #include "esp_wifi.h"
 
@@ -46,14 +44,13 @@ struct batt_t {
 batt_t get_battery_percentage() {
   // When reading the battery voltage, POWER_EN must be turned on
   epd_poweron();
-
   delay(50);
 
-  Serial.println(epd_ambient_temperature());
+  // Serial.println(epd_ambient_temperature());
 
   uint16_t v = analogRead(BATT_PIN);
-  Serial.print("Battery analogRead value is");
-  Serial.println(v);
+  epd_poweroff();
+
   double_t battery_voltage =
       ((double_t)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
 
@@ -65,30 +62,32 @@ batt_t get_battery_percentage() {
     percent_experiment = 100;
   }
 
-  String voltage = "Battery Voltage :" + String(battery_voltage) +
-                   "V which is around " + String(percent_experiment) + "%";
-  Serial.println(voltage);
-
-  epd_poweroff();
-  delay(50);
-
   batt_t res;
   res.v = battery_voltage;
   res.percent = percent_experiment;
   return res;
 }
 
-void start_deep_sleep_with_wakeup_sources() {
+void start_deep_sleep_with_wakeup_sources(struct tm *now) {
   epd_poweroff();
   // epd_poweroff_all();
-  esp_wifi_stop();
+  // esp_wifi_stop();
   // adc_power_off();
-  adc_power_release();
-  delay(400);
+  // adc_power_release();
+  // delay(400);
   // esp_sleep_enable_ext0_wakeup(FIRST_BTN_PIN, 0);
-  esp_sleep_enable_timer_wakeup(30 * 60 * 1000000);
 
-  Serial.println("Sending device to deepsleep");
+  // Default 1 hour = 60 min = 60 * 60 seconds.
+  time_t sleep_for_s = 60 * 60;
+
+  // If it's past midnight and before 6 am, sleep until 6am.
+  if (now != nullptr && now->tm_hour < 6) {
+    struct tm time_6am = *now;
+    time_6am.tm_hour = 6;
+    sleep_for_s = eink::ToEpoch(time_6am) - eink::ToEpoch(*now);
+  }
+
+  esp_sleep_enable_timer_wakeup(sleep_for_s * 1e6);
   esp_deep_sleep_start();
 }
 
@@ -158,7 +157,35 @@ int DrawHeader(eink::Display &display, const struct tm &now, int y) {
   return y;
 }
 
-int DrawWeather(eink::Display &display, time_t now, int y) {}
+void DrawFooter(eink::Display &display, time_t runtime_ms) {
+  std::string txt = "Runtime: " + to_fixed_str(runtime_ms / 1000.0, 1) + " s";
+  display.DrawText(EPD_WIDTH - kPadding, EPD_HEIGHT - kPadding, txt.c_str(), 0,
+                   eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+}
+
+int DrawWeather(eink::Display &display, const eink::Weather &w, time_t now,
+                int y) {
+  int header_size = display.FontHeight(eink::FontSize::Size16);
+  int weather_size = display.FontHeight(eink::FontSize::Size24);
+  int text_size = display.FontHeight(eink::FontSize::Size12);
+
+  display.DrawText(y + header_size + kPadding, kPadding, "Weather", 0,
+                   eink::FontSize::Size16);
+  y += header_size + kPadding;
+
+  int weather_y = y + kPadding + weather_size - kPadding;
+  std::string val = to_fixed_str(w.temp, 1) + " °C";
+  display.DrawText(weather_y, kPadding, val.c_str(), 0, eink::FontSize::Size24);
+
+  int state_y = y + kPadding + text_size;
+  display.DrawText(state_y, EINK_DISPLAY_HEIGHT - kPadding, w.state.c_str(), 0,
+                   eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+  display.DrawText(state_y + kPadding + text_size,
+                   EINK_DISPLAY_HEIGHT - kPadding,
+                   eink::ToHumanDiff(now - w.last_updated).c_str(), 0,
+                   eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+  return weather_y;
+}
 
 int DrawSoilMoistures(eink::Display &display,
                       std::vector<eink::SoilMoisture> soil_moistures,
@@ -172,7 +199,10 @@ int DrawSoilMoistures(eink::Display &display,
 
   for (int i = 0; i < soil_moistures.size(); i++) {
     const eink::SoilMoisture &s = soil_moistures[i];
+    display.DrawRect(y + kPadding, 0, y + 2 * kPadding + text_size, EPD_HEIGHT,
+                     i % 2 ? 200 : 250);
     y += kPadding + text_size;
+    // y += text_size;
     display.DrawText(y, kPadding, s.name.c_str(), 0, eink::FontSize::Size12);
 
     std::string val = to_fixed_str(s.value, 0) + "%";
@@ -188,62 +218,70 @@ int DrawSoilMoistures(eink::Display &display,
 }
 
 void setup() {
+  time_t t0 = millis();
   auto &logger = eink::Logger::Get();
 
   adc_power_acquire();
-
-  eink::ConfigNTP();
 
   correct_adc_reference();
 
   print_wakeup_reason();
 
+  Serial.printf("Before wifi %ld\n", millis() - t0);
   if (eink::WiFiBegin(kWiFiSSID, kWiFiPass) != 0) {
     logger.Printf("Unable to connect to WiFi. Sleeping.\n");
-    start_deep_sleep_with_wakeup_sources();
+    start_deep_sleep_with_wakeup_sources(nullptr);
   }
+  Serial.printf("After wifi %ld\n", millis() - t0);
+  eink::ConfigNTP();
 
   eink::HAClient hacli(kHomeAssistantAPIUrl, kHomeAssistantToken);
-  std::vector<eink::SoilMoisture> soil_moistures = hacli.FetchSoilMoisture();
-  // std::vector<eink::SoilMoisture> soil_moistures;
+  eink::HAData data = hacli.FetchData();
+
+  Serial.printf("After getting data %ld\n", millis() - t0);
+
+  Serial.printf("Before getting time %ld\n", millis() - t0);
+  struct tm t = eink::GetCurrentTime();
+  Serial.printf("After getting time %ld\n", millis() - t0);
+
+  eink::WiFiDisconnect();
+  esp_wifi_stop();
+  adc_power_release();
 
   eink::Display display;
-  display.Clear();
+  // display.Clear();
 
   // const int header_size = display.FontHeight(eink::FontSize::Size16);
   // const int text_size = display.FontHeight(eink::FontSize::Size12);
 
-  struct tm t = eink::GetCurrentTime();
   time_t now = eink::ToEpoch(t);
 
-  int y = 0;
-  y = DrawHeader(display, t, y);
-  y = DrawSoilMoistures(display, soil_moistures, now, y);
+  // LOG("Now: %s\n" eink::FormatTime(t));
 
+  int y = 0;
+
+  // Alignment test.
+  // display.DrawRect(0, 0, text_size, EINK_DISPLAY_HEIGHT, 10);
+  // display.DrawText(text_size, 0, "Hello, world", 250,
+  // eink::FontSize::Size12);
+  Serial.printf("Before drawing %ld\n", millis() - t0);
+
+  y = DrawHeader(display, t, y);
+  y = DrawWeather(display, data.weather, now, y);
+  y = DrawSoilMoistures(display, data.soil_moistures, now, y);
+  DrawFooter(display, millis() - t0);
+
+  Serial.printf("Before updating %ld\n", millis() - t0);
   display.Update();
 
+  Serial.printf("After updating %ld\n", millis() - t0);
   esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
   if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
-    //   Serial.println("Woken up by wakeup source button");
-    //   pressed_wakeup_btn_index++;
-    //   String message = String("Woken up from deepsleep times: ");
-    //   message.concat(String(pressed_wakeup_btn_index));
-    //   display_full_screen_left_aligned_text(message.c_str());
-
   } else {
-    //   /* Non deepsleep wakeup source button interrupt caused start e.g. reset
-    //   btn
-    //    */
-    //   Serial.println("Woken up by reset button or power cycle");
-    //   const char* message =
-    //       "Hello there! You just turned me on.\nIn 30s I will go to
-    //       deepsleep";
-    //   display_center_message(message);
   }
 
-  eink::WiFiDisconnect();
   runs++;
-  start_deep_sleep_with_wakeup_sources();
+  start_deep_sleep_with_wakeup_sources(&t);
 }
 
 void loop() {}

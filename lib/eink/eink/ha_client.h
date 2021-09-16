@@ -15,10 +15,21 @@ struct SoilMoisture {
   std::string error;
 };
 
+struct Weather {
+  double temp;
+  std::string state;
+  time_t last_updated;
+};
+
+struct HAData {
+  std::vector<SoilMoisture> soil_moistures;
+  Weather weather;
+};
+
 class HAClient {
  public:
   HAClient(const char *url, const char *token) : url_(url), token_(token) {}
-  std::vector<SoilMoisture> FetchSoilMoisture();
+  HAData FetchData();
 
  private:
   const std::string url_;
