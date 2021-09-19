@@ -42,12 +42,28 @@ void ParseWeatherData(const JsonObject& entity, Weather& w) {
     struct tm last_updated =
         ParseISODate(entity["last_updated"].as<const char*>());
     w.last_updated = ToEpoch(last_updated);
-    LOG("TEMP: %f\n", w.temp);
+    LOG("Weather temp: %f\n", w.temp);
   } else if (name == "sensor.openweathermapzurich_condition") {
     w.state = entity["state"].as<std::string>();
     w.state[0] = std::toupper(w.state[0]);
-    LOG("STATE: %s\n", w.state.c_str());
+    LOG("Weather state: %s\n", w.state.c_str());
   }
+}
+
+void ParseCO2Data(const JsonObject& entity, CO2& res) {
+  res.ppm = entity["state"].as<int>();
+  struct tm last_updated =
+      ParseISODate(entity["last_updated"].as<const char*>());
+  res.last_updated = ToEpoch(last_updated);
+  LOG("CO2: %d, updated %s ago\n", res.ppm, FormatTime(last_updated).c_str());
+}
+
+void ParseTempData(const JsonObject& entity, Temp& res) {
+  res.temp = entity["state"].as<double>();
+  struct tm last_updated =
+      ParseISODate(entity["last_updated"].as<const char*>());
+  res.last_updated = ToEpoch(last_updated);
+  LOG("Temp: %f, updated %s ago\n", res.temp, FormatTime(last_updated).c_str());
 }
 
 }  // namespace
@@ -67,28 +83,27 @@ HAData HAClient::FetchData() {
   deserializeJson(doc, http.getStream());
   LOG("JSON: %d\n", doc.size());
 
-  std::vector<SoilMoisture> res;
-  Weather weather;
+  HAData data;
   for (const auto& el : doc.as<JsonArray>()) {
     std::string entity_id(el["entity_id"].as<std::string>());
 
     if (entity_id.find("soil_moisture") != entity_id.npos &&
         entity_id.find("test") == entity_id.npos) {
-      // LOG("Entity ID: %s\n", entity_id.c_str());
-      res.push_back(ParseSoilMoisture(el.as<JsonObject>()));
+      data.soil_moistures.push_back(ParseSoilMoisture(el.as<JsonObject>()));
     } else if (entity_id.find("sensor.openweathermapzurich") !=
                entity_id.npos) {
-      ParseWeatherData(el.as<JsonObject>(), weather);
+      ParseWeatherData(el.as<JsonObject>(), data.weather);
+    } else if (entity_id == "sensor.mh_z19_co2_value") {
+      ParseCO2Data(el.as<JsonObject>(), data.co2);
+    } else if (entity_id == "sensor.living_room_temperature") {
+      ParseTempData(el.as<JsonObject>(), data.temp);
     }
   }
-  std::sort(res.begin(), res.end(),
+  std::sort(data.soil_moistures.begin(), data.soil_moistures.end(),
             [](const SoilMoisture& lhs, const SoilMoisture& rhs) {
               return lhs.value < rhs.value;
             });
 
-  HAData data;
-  data.soil_moistures = std::move(res);
-  data.weather = std::move(weather);
   return data;
 }
 

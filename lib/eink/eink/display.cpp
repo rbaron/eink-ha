@@ -4,6 +4,7 @@
 
 #include "Firasans.h"
 #include "opensans16.h"
+#include "opensans16b.h"
 #include "opensans24.h"
 
 namespace eink {
@@ -15,6 +16,8 @@ const EpdFont& GetFont(FontSize size) {
       return FiraSans_12;
     case FontSize::Size16:
       return OpenSans16;
+    case FontSize::Size16b:
+      return OpenSans16B;
     case FontSize::Size24:
       return OpenSans24;
   }

@@ -21,9 +21,21 @@ struct Weather {
   time_t last_updated;
 };
 
+struct Temp {
+  double temp;
+  time_t last_updated;
+};
+
+struct CO2 {
+  int ppm;
+  time_t last_updated;
+};
+
 struct HAData {
   std::vector<SoilMoisture> soil_moistures;
   Weather weather;
+  CO2 co2;
+  Temp temp;
 };
 
 class HAClient {

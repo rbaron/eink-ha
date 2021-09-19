@@ -68,15 +68,7 @@ batt_t get_battery_percentage() {
   return res;
 }
 
-void start_deep_sleep_with_wakeup_sources(struct tm *now) {
-  epd_poweroff();
-  // epd_poweroff_all();
-  // esp_wifi_stop();
-  // adc_power_off();
-  // adc_power_release();
-  // delay(400);
-  // esp_sleep_enable_ext0_wakeup(FIRST_BTN_PIN, 0);
-
+void start_deep_sleep(struct tm *now) {
   // Default 1 hour = 60 min = 60 * 60 seconds.
   time_t sleep_for_s = 60 * 60;
 
@@ -145,12 +137,12 @@ int DrawHeader(eink::Display &display, const struct tm &now, int y) {
   int text_size = display.FontHeight(eink::FontSize::Size12);
 
   std::string tstring = eink::FormatTime(now);
-  y += kPadding + text_size;
+  y += text_size;
   display.DrawText(y, kPadding, tstring.c_str(), 0, eink::FontSize::Size12,
                    eink::DrawTextDirection::LTR);
 
   batt_t batt = get_battery_percentage();
-  std::string batt_str = to_fixed_str(batt.v, 2) + " V | " + to_fixed_str(runs);
+  std::string batt_str = to_fixed_str(batt.v, 2) + " V";
 
   display.DrawText(y, EPD_HEIGHT - kPadding, batt_str.c_str(), 0,
                    eink::FontSize::Size12, eink::DrawTextDirection::RTL);
@@ -158,7 +150,8 @@ int DrawHeader(eink::Display &display, const struct tm &now, int y) {
 }
 
 void DrawFooter(eink::Display &display, time_t runtime_ms) {
-  std::string txt = "Runtime: " + to_fixed_str(runtime_ms / 1000.0, 1) + " s";
+  std::string txt = "Run #" + to_fixed_str(runs) + " took " +
+                    to_fixed_str(runtime_ms / 1000.0, 1) + " s";
   display.DrawText(EPD_WIDTH - kPadding, EPD_HEIGHT - kPadding, txt.c_str(), 0,
                    eink::FontSize::Size12, eink::DrawTextDirection::RTL);
 }
@@ -170,7 +163,7 @@ int DrawWeather(eink::Display &display, const eink::Weather &w, time_t now,
   int text_size = display.FontHeight(eink::FontSize::Size12);
 
   display.DrawText(y + header_size + kPadding, kPadding, "Weather", 0,
-                   eink::FontSize::Size16);
+                   eink::FontSize::Size16b);
   y += header_size + kPadding;
 
   int weather_y = y + kPadding + weather_size - kPadding;
@@ -182,9 +175,37 @@ int DrawWeather(eink::Display &display, const eink::Weather &w, time_t now,
                    eink::FontSize::Size12, eink::DrawTextDirection::RTL);
   display.DrawText(state_y + kPadding + text_size,
                    EINK_DISPLAY_HEIGHT - kPadding,
-                   eink::ToHumanDiff(now - w.last_updated).c_str(), 0,
-                   eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+                   (eink::ToHumanDiff(now - w.last_updated) + " ago").c_str(),
+                   0, eink::FontSize::Size12, eink::DrawTextDirection::RTL);
   return weather_y;
+}
+
+int DrawTempCO2(eink::Display &display, const eink::Temp &t, const eink::CO2 &w,
+                time_t now, int y) {
+  int header_size = display.FontHeight(eink::FontSize::Size16);
+  int weather_size = display.FontHeight(eink::FontSize::Size24);
+  int text_size = display.FontHeight(eink::FontSize::Size12);
+
+  display.DrawText(y + header_size + kPadding, kPadding, "Living Room", 0,
+                   eink::FontSize::Size16b);
+  y += header_size + kPadding;
+
+  y += kPadding + weather_size - kPadding;
+  std::string val = to_fixed_str(t.temp, 1) + " °C";
+  display.DrawText(y, kPadding, val.c_str(), 0, eink::FontSize::Size24);
+
+  std::string co2_val = to_fixed_str(w.ppm, 0) + " ppm";
+  display.DrawText(y, EINK_DISPLAY_HEIGHT / 2, co2_val.c_str(), 0,
+                   eink::FontSize::Size24);
+
+  y += kPadding + text_size;
+  display.DrawText(y, kPadding,
+                   (eink::ToHumanDiff(now - t.last_updated) + " ago").c_str(),
+                   0, eink::FontSize::Size12, eink::DrawTextDirection::LTR);
+  display.DrawText(y, EINK_DISPLAY_HEIGHT / 2,
+                   (eink::ToHumanDiff(now - w.last_updated) + " ago").c_str(),
+                   0, eink::FontSize::Size12, eink::DrawTextDirection::LTR);
+  return y;
 }
 
 int DrawSoilMoistures(eink::Display &display,
@@ -194,7 +215,7 @@ int DrawSoilMoistures(eink::Display &display,
   int text_size = display.FontHeight(eink::FontSize::Size12);
 
   display.DrawText(y + header_size + kPadding, kPadding, "b-parasites", 0,
-                   eink::FontSize::Size16);
+                   eink::FontSize::Size16b);
   y += header_size + kPadding;
 
   for (int i = 0; i < soil_moistures.size(); i++) {
@@ -210,7 +231,7 @@ int DrawSoilMoistures(eink::Display &display,
                      eink::FontSize::Size12, eink::DrawTextDirection::RTL);
 
     std::string time = eink::ToHumanDiff(now - s.last_updated);
-    display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding - 100, time.c_str(), 0,
+    display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding - 150, time.c_str(), 0,
                      eink::FontSize::Size12, eink::DrawTextDirection::RTL);
   }
 
@@ -230,7 +251,7 @@ void setup() {
   Serial.printf("Before wifi %ld\n", millis() - t0);
   if (eink::WiFiBegin(kWiFiSSID, kWiFiPass) != 0) {
     logger.Printf("Unable to connect to WiFi. Sleeping.\n");
-    start_deep_sleep_with_wakeup_sources(nullptr);
+    start_deep_sleep(nullptr);
   }
   Serial.printf("After wifi %ld\n", millis() - t0);
   eink::ConfigNTP();
@@ -249,25 +270,16 @@ void setup() {
   adc_power_release();
 
   eink::Display display;
-  // display.Clear();
-
-  // const int header_size = display.FontHeight(eink::FontSize::Size16);
-  // const int text_size = display.FontHeight(eink::FontSize::Size12);
 
   time_t now = eink::ToEpoch(t);
 
-  // LOG("Now: %s\n" eink::FormatTime(t));
-
   int y = 0;
 
-  // Alignment test.
-  // display.DrawRect(0, 0, text_size, EINK_DISPLAY_HEIGHT, 10);
-  // display.DrawText(text_size, 0, "Hello, world", 250,
-  // eink::FontSize::Size12);
   Serial.printf("Before drawing %ld\n", millis() - t0);
 
   y = DrawHeader(display, t, y);
   y = DrawWeather(display, data.weather, now, y);
+  y = DrawTempCO2(display, data.temp, data.co2, now, y);
   y = DrawSoilMoistures(display, data.soil_moistures, now, y);
   DrawFooter(display, millis() - t0);
 
@@ -281,7 +293,7 @@ void setup() {
   }
 
   runs++;
-  start_deep_sleep_with_wakeup_sources(&t);
+  start_deep_sleep(&t);
 }
 
 void loop() {}
