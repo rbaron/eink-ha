@@ -19,19 +19,8 @@
 
 constexpr int kPadding = 10;
 
-/**
- * Upper most button on side of device. Used to setup as wakeup source to start
- * from deepsleep. Pinout here
- * https://ae01.alicdn.com/kf/H133488d889bd4dd4942fbc1415e0deb1j.jpg
- */
-gpio_num_t FIRST_BTN_PIN = GPIO_NUM_39;
-
 int vref = 1100;
 
-/**
- * RTC Memory var to get number of wakeups via wakeup source button
- * For demo purposes of rtc data attr
- **/
 RTC_DATA_ATTR int runs;
 
 struct batt_t {
@@ -79,9 +68,6 @@ void start_deep_sleep(struct tm *now) {
   esp_deep_sleep_start();
 }
 
-/**
- * Function that prints the reason by which ESP32 has been awaken from sleep
- */
 void print_wakeup_reason() {
   esp_sleep_wakeup_cause_t wakeup_reason;
   wakeup_reason = esp_sleep_get_wakeup_cause();
@@ -115,10 +101,6 @@ std::string to_fixed_str(const T value, const int n = 0) {
   return out.str();
 }
 
-/**
- * Correct the ADC reference voltage. Was in example of lilygo epd47 repository
- * to calc battery percentage
- */
 void correct_adc_reference() {
   esp_adc_cal_characteristics_t adc_chars;
   esp_adc_cal_value_t val_type = esp_adc_cal_characterize(
