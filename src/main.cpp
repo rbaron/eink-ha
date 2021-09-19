@@ -263,12 +263,7 @@ void setup() {
 
   Serial.printf("Before updating %ld\n", millis() - t0);
   display.Update();
-
   Serial.printf("After updating %ld\n", millis() - t0);
-  esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
-  if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
-  } else {
-  }
 
   runs++;
   start_deep_sleep(&t);
