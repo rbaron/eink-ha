@@ -5,17 +5,15 @@
 #include <sstream>
 
 #include "credentials.h"
-#include "epd_driver.h"
-#include "esp_adc_cal.h"
-#include "esp_sleep.h"
-#include "esp_wifi.h"
-
-// eink.
 #include "eink/display.h"
 #include "eink/ha_client.h"
 #include "eink/logger.h"
 #include "eink/time.h"
 #include "eink/wifi.h"
+#include "epd_driver.h"
+#include "esp_adc_cal.h"
+#include "esp_sleep.h"
+#include "esp_wifi.h"
 
 #define BATT_PIN 36
 
@@ -45,8 +43,6 @@ batt_t get_battery_percentage() {
   // When reading the battery voltage, POWER_EN must be turned on
   epd_poweron();
   delay(50);
-
-  // Serial.println(epd_ambient_temperature());
 
   uint16_t v = analogRead(BATT_PIN);
   epd_poweroff();

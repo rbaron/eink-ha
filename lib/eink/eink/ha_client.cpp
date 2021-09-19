@@ -37,7 +37,6 @@ SoilMoisture ParseSoilMoisture(const JsonObject& entity) {
 void ParseWeatherData(const JsonObject& entity, Weather& w) {
   const std::string name = entity["entity_id"].as<std::string>();
   if (name == "sensor.openweathermapzurich_temperature") {
-    // w.temp = std::atof(entity["state"].as<const char*>());
     w.temp = entity["state"].as<double>();
     struct tm last_updated =
         ParseISODate(entity["last_updated"].as<const char*>());
