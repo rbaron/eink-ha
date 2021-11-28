@@ -17,6 +17,13 @@
 
 #define BATT_PIN 36
 
+// Consider a sensor value stale if its older than this value.
+#define STALE_THRESHOLD_S 2 * 3600
+#define STALE_COLOR 180
+
+#define SOIL_MOISTURE_ROWS 10
+#define SOIL_MOISTURE_COLS 2
+
 constexpr int kPadding = 10;
 
 int vref = 1100;
@@ -188,32 +195,52 @@ int DrawTempCO2(eink::Display &display, const eink::Temp &t, const eink::CO2 &w,
 
 int DrawSoilMoistures(eink::Display &display,
                       std::vector<eink::SoilMoisture> soil_moistures,
-                      time_t now, int y) {
+                      time_t now, int y0) {
   int header_size = display.FontHeight(eink::FontSize::Size16);
   int text_size = display.FontHeight(eink::FontSize::Size12);
 
-  display.DrawText(y + header_size + kPadding, kPadding, "b-parasites", 0,
+  display.DrawText(y0 + header_size + kPadding, kPadding, "b-parasites", 0,
                    eink::FontSize::Size16b);
-  y += header_size + kPadding;
+  y0 += header_size + kPadding;
 
-  for (int i = 0; i < soil_moistures.size(); i++) {
-    const eink::SoilMoisture &s = soil_moistures[i];
-    display.DrawRect(y + kPadding, 0, y + 2 * kPadding + text_size, EPD_HEIGHT,
-                     i % 2 ? 200 : 250);
-    y += kPadding + text_size;
-    // y += text_size;
-    display.DrawText(y, kPadding, s.name.c_str(), 0, eink::FontSize::Size12);
-
-    std::string val = to_fixed_str(s.value, 0) + "%";
-    display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding, val.c_str(), 0,
-                     eink::FontSize::Size12, eink::DrawTextDirection::RTL);
-
-    std::string time = eink::ToHumanDiff(now - s.last_updated);
-    display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding - 150, time.c_str(), 0,
-                     eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+  int y_rows = y0;
+  for (int i = 0; i < SOIL_MOISTURE_ROWS; i++) {
+    display.DrawRect(y_rows + kPadding, 0, y_rows + 2 * kPadding + text_size,
+                     EPD_HEIGHT, i % 2 ? 200 : 250);
+    y_rows += kPadding + text_size;
   }
 
-  return y;
+  // int y_soil = y;
+  for (int i = 0; i < soil_moistures.size(); i++) {
+    const eink::SoilMoisture &s = soil_moistures[i];
+    // display.DrawRect(y + kPadding, 0, y + 2 * kPadding + text_size,
+    // EPD_HEIGHT,
+    //                  i % 2 ? 200 : 250);
+    // y_soil += kPadding + text_size;
+
+    int col = i / SOIL_MOISTURE_ROWS;
+    int row = i % SOIL_MOISTURE_ROWS;
+
+    int x = kPadding + col * EPD_HEIGHT / SOIL_MOISTURE_COLS;
+    int y = y0 + kPadding + text_size + row * (kPadding + text_size);
+
+    uint8_t text_color = now - s.last_updated > 2 * 3600 ? STALE_COLOR : 0;
+    display.DrawText(y, x, s.name.c_str(), text_color, eink::FontSize::Size12);
+
+    std::string val = s.error == "" ? (to_fixed_str(s.value, 0) + "%") : "?";
+    // display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding, val.c_str(),
+    // text_color,
+    display.DrawText(y, x - 2 * kPadding + EPD_HEIGHT / SOIL_MOISTURE_COLS,
+                     val.c_str(), text_color, eink::FontSize::Size12,
+                     eink::DrawTextDirection::RTL);
+
+    // std::string time = eink::ToHumanDiff(now - s.last_updated);
+    // display.DrawText(y, EINK_DISPLAY_HEIGHT - kPadding - 150, time.c_str(),
+    // 0,
+    //                  eink::FontSize::Size12, eink::DrawTextDirection::RTL);
+  }
+
+  return y_rows + kPadding;
 }
 
 void setup() {

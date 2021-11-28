@@ -28,7 +28,8 @@ const EpdFont& GetFont(FontSize size) {
 Display::Display() {
   epd_init(EPD_OPTIONS_DEFAULT);
   hl_ = epd_hl_init(EPD_BUILTIN_WAVEFORM);
-  epd_set_rotation(EPD_ROT_INVERTED_PORTRAIT);
+  // epd_set_rotation(EPD_ROT_INVERTED_PORTRAIT);
+  epd_set_rotation(EPD_ROT_PORTRAIT);
   fb_ = epd_hl_get_framebuffer(&hl_);
   epd_clear();
 }

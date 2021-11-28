@@ -100,6 +100,12 @@ HAData HAClient::FetchData() {
   }
   std::sort(data.soil_moistures.begin(), data.soil_moistures.end(),
             [](const SoilMoisture& lhs, const SoilMoisture& rhs) {
+              // If lhs has an error, let rhs be less, so it will rank earlier.
+              if (lhs.error != "" && rhs.error == "") {
+                return false;
+              } else if (lhs.error == "" && rhs.error != "") {
+                return true;
+              }
               return lhs.value < rhs.value;
             });
 
