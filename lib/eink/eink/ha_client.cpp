@@ -5,7 +5,6 @@
 
 #include <string>
 
-#include "eink/logger.h"
 #include "eink/time.h"
 
 #define EINK_HA_CLIENT_HTTP_RESP_SIZE 100000
@@ -28,8 +27,8 @@ SoilMoisture ParseSoilMoisture(const JsonObject& entity) {
 
   struct tm last_updated =
       ParseISODate(entity["last_updated"].as<const char*>());
-  LOG("%s: %f (error: %s), last updated: %s\n", s.name.c_str(), s.value,
-      s.error.c_str(), FormatTime(last_updated).c_str());
+  Serial.printf("%s: %f (error: %s), last updated: %s\n", s.name.c_str(),
+                s.value, s.error.c_str(), FormatTime(last_updated).c_str());
   s.last_updated = ToEpoch(last_updated);
   return s;
 }
@@ -41,11 +40,11 @@ void ParseWeatherData(const JsonObject& entity, Weather& w) {
     struct tm last_updated =
         ParseISODate(entity["last_updated"].as<const char*>());
     w.last_updated = ToEpoch(last_updated);
-    LOG("Weather temp: %f\n", w.temp);
+    Serial.printf("Weather temp: %f\n", w.temp);
   } else if (name == "sensor.openweathermapzurich_condition") {
     w.state = entity["state"].as<std::string>();
     w.state[0] = std::toupper(w.state[0]);
-    LOG("Weather state: %s\n", w.state.c_str());
+    Serial.printf("Weather state: %s\n", w.state.c_str());
   }
 }
 
@@ -54,7 +53,8 @@ void ParseCO2Data(const JsonObject& entity, CO2& res) {
   struct tm last_updated =
       ParseISODate(entity["last_updated"].as<const char*>());
   res.last_updated = ToEpoch(last_updated);
-  LOG("CO2: %d, updated %s ago\n", res.ppm, FormatTime(last_updated).c_str());
+  Serial.printf("CO2: %d, updated %s ago\n", res.ppm,
+                FormatTime(last_updated).c_str());
 }
 
 void ParseTempData(const JsonObject& entity, Temp& res) {
@@ -62,7 +62,8 @@ void ParseTempData(const JsonObject& entity, Temp& res) {
   struct tm last_updated =
       ParseISODate(entity["last_updated"].as<const char*>());
   res.last_updated = ToEpoch(last_updated);
-  LOG("Temp: %f, updated %s ago\n", res.temp, FormatTime(last_updated).c_str());
+  Serial.printf("Temp: %f, updated %s ago\n", res.temp,
+                FormatTime(last_updated).c_str());
 }
 
 }  // namespace
@@ -76,11 +77,11 @@ HAData HAClient::FetchData() {
   http.addHeader("Authorization", header.c_str());
   int code = http.GET();
 
-  LOG("HTTP status code: %d\n", code);
+  Serial.printf("HTTP status code: %d\n", code);
 
   DynamicJsonDocument doc(EINK_HA_CLIENT_HTTP_RESP_SIZE);
   deserializeJson(doc, http.getStream());
-  LOG("JSON: %d\n", doc.size());
+  Serial.printf("JSON: %d\n", doc.size());
 
   HAData data;
   for (const auto& el : doc.as<JsonArray>()) {

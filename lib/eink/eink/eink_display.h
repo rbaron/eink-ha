@@ -1,6 +1,9 @@
+#ifdef EINK_LILYGO
+
 #ifndef __EINK_DISPLAY__
 #define __EINK_DISPLAY__
 
+#include "eink/display_utils.h"
 #include "epd_driver.h"
 #include "epd_highlevel.h"
 
@@ -8,18 +11,6 @@
 #define EINK_DISPLAY_HEIGHT EPD_HEIGHT
 
 namespace eink {
-
-enum class FontSize {
-  Size12,
-  Size16,
-  Size16b,
-  Size24,
-};
-
-enum class DrawTextDirection {
-  LTR,
-  RTL,
-};
 
 class Display {
  public:
@@ -43,4 +34,7 @@ class Display {
 };
 
 }  // namespace eink
+
 #endif  // __EINK_DISPLAY__
+
+#endif  // EINK_LILIYGO

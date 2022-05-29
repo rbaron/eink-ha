@@ -1,4 +1,6 @@
-#include "eink/display.h"
+#ifdef EINK_LILYGO
+
+#include "eink/eink_display.h"
 
 #include <Arduino.h>
 
@@ -72,3 +74,5 @@ int Display::FontHeight(FontSize f) {
 }
 
 }  // namespace eink
+
+#endif  // EINK_LILYGO

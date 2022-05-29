@@ -4,8 +4,6 @@
 
 #include <sstream>
 
-#include "eink/logger.h"
-
 namespace eink {
 namespace {
 constexpr long kGMTOffsetS = 3600;
@@ -25,7 +23,7 @@ void ConfigNTP() {
 struct tm GetCurrentTime() {
   struct tm t;
   int res = getLocalTime(&t);
-  LOG("Get local time response: %d\n", res);
+  Serial.printf("Get local time response: %d\n", res);
   return t;
 }
 
