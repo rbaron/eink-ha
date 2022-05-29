@@ -35,6 +35,7 @@ Display::Display() {
 }
 
 void Display::Clear() {
+  epd_fullclear(&hl_, 25);
   epd_hl_set_all_white(&hl_);
 }
 
@@ -62,7 +63,7 @@ void Display::DrawText(int y, int x, const char* text, uint8_t color,
 
 void Display::Update() {
   epd_poweron();
-  epd_hl_update_screen(&hl_, MODE_GC16, 20);
+  epd_hl_update_screen(&hl_, MODE_GC16, 25);
   epd_poweroff();
 }
 

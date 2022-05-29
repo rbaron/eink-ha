@@ -61,8 +61,8 @@ batt_t get_battery_percentage() {
 }
 
 void start_deep_sleep(struct tm *now) {
-  // Default 1 hour = 60 min = 60 * 60 seconds.
-  time_t sleep_for_s = 60 * 60;
+  // 10 minutes.
+  time_t sleep_for_s = 10 * 60;
 
   // If it's past midnight and before 6 am, sleep until 6am.
   if (now != nullptr && now->tm_hour < 6) {
@@ -276,6 +276,22 @@ void setup() {
 
   eink::Display display;
 
+  // display.DrawRect(0, 0, EINK_DISPLAY_WIDTH, EINK_DISPLAY_HEIGHT, 0);
+  // display.Update();
+  // delay(1000);
+  // return;
+
+  // // while (true) {
+  // for (int i = 0; i < 2; i++) {
+  //   display.DrawRect(0, 0, EINK_DISPLAY_WIDTH, EINK_DISPLAY_HEIGHT, 0);
+  //   display.Update();
+  //   delay(1000);
+
+  //   display.Clear();
+  //   display.Update();
+  //   delay(1000);
+  // }
+
   time_t now = eink::ToEpoch(t);
 
   int y = 0;
@@ -291,6 +307,8 @@ void setup() {
   Serial.printf("Before updating %ld\n", millis() - t0);
   display.Update();
   Serial.printf("After updating %ld\n", millis() - t0);
+
+  delay(2000);
 
   runs++;
   start_deep_sleep(&t);
