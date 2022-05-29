@@ -61,7 +61,7 @@ batt_t get_battery_percentage() {
 
 constexpr int kPadding = 10;
 
-int DrawHeader(eink::Display &display, const struct tm &now, int y) {
+int DrawHeader(eink::lilygo::Display &display, const struct tm &now, int y) {
   int text_size = display.FontHeight(eink::FontSize::Size12);
 
   std::string tstring = eink::FormatTime(now);
@@ -77,7 +77,7 @@ int DrawHeader(eink::Display &display, const struct tm &now, int y) {
   return y;
 }
 
-void DrawFooter(eink::Display &display, time_t runtime_ms, int n_runs) {
+void DrawFooter(eink::lilygo::Display &display, time_t runtime_ms, int n_runs) {
   std::string txt = "Run #" + to_fixed_str(n_runs) + " took " +
                     to_fixed_str(runtime_ms / 1000.0, 1) + " s";
   display.DrawText(EINK_DISPLAY_WIDTH - kPadding,
@@ -85,8 +85,8 @@ void DrawFooter(eink::Display &display, time_t runtime_ms, int n_runs) {
                    eink::FontSize::Size12, eink::DrawTextDirection::RTL);
 }
 
-int DrawWeather(eink::Display &display, const eink::Weather &w, time_t now,
-                int y) {
+int DrawWeather(eink::lilygo::Display &display, const eink::Weather &w,
+                time_t now, int y) {
   int header_size = display.FontHeight(eink::FontSize::Size16);
   int weather_size = display.FontHeight(eink::FontSize::Size24);
   int text_size = display.FontHeight(eink::FontSize::Size12);
@@ -109,8 +109,8 @@ int DrawWeather(eink::Display &display, const eink::Weather &w, time_t now,
   return weather_y;
 }
 
-int DrawTempCO2(eink::Display &display, const eink::Temp &t, const eink::CO2 &w,
-                time_t now, int y) {
+int DrawTempCO2(eink::lilygo::Display &display, const eink::Temp &t,
+                const eink::CO2 &w, time_t now, int y) {
   int header_size = display.FontHeight(eink::FontSize::Size16);
   int weather_size = display.FontHeight(eink::FontSize::Size24);
   int text_size = display.FontHeight(eink::FontSize::Size12);
@@ -137,7 +137,7 @@ int DrawTempCO2(eink::Display &display, const eink::Temp &t, const eink::CO2 &w,
   return y;
 }
 
-int DrawSoilMoistures(eink::Display &display,
+int DrawSoilMoistures(eink::lilygo::Display &display,
                       std::vector<eink::SoilMoisture> soil_moistures,
                       time_t now, int y0) {
   int header_size = display.FontHeight(eink::FontSize::Size16);

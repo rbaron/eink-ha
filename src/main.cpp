@@ -5,16 +5,21 @@
 #include <sstream>
 
 #include "credentials.h"
-// #include "eink/display.h"
-// #include "eink/eink_display.h"
 #include "eink/ha_client.h"
-#include "eink/lilygo/runner.h"
-#include "eink/tft_display.h"
 #include "eink/time.h"
 #include "eink/wifi.h"
-// #include "epd_driver.h"
 #include "esp_sleep.h"
 #include "esp_wifi.h"
+
+#if defined(EINK_LILYGO)
+#include "eink/lilygo/runner.h"
+#define Runner eink::lilygo::LilygoRunner
+#elif defined(EINK_TFT)
+#include "eink/tft/runner.h"
+#define Runner eink::tft::TFTRunner
+#else
+#error No runner defined
+#endif
 
 RTC_DATA_ATTR int runs;
 
@@ -61,6 +66,10 @@ void print_wakeup_reason() {
 void setup() {
   time_t t0 = millis();
 
+  Serial.begin(115200);
+  while (!Serial)
+    ;
+
   adc_power_acquire();
 
   print_wakeup_reason();
@@ -86,11 +95,12 @@ void setup() {
   esp_wifi_stop();
   adc_power_release();
 
-  eink::lilygo::LilygoRunner runner;
+  Runner runner;
+
   runner.Draw(data, t, runs);
 
   runs++;
-  start_deep_sleep(&t);
+  // start_deep_sleep(&t);
 }
 
 void loop() {}

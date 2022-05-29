@@ -1,6 +1,6 @@
 #ifdef EINK_LILYGO
 
-#include "eink/eink_display.h"
+#include "eink/lilygo/eink_display.h"
 
 #include <Arduino.h>
 
@@ -10,6 +10,8 @@
 #include "opensans24.h"
 
 namespace eink {
+namespace lilygo {
+
 namespace {
 
 const EpdFont& GetFont(FontSize size) {
@@ -73,6 +75,7 @@ int Display::FontHeight(FontSize f) {
   return GetFont(f).advance_y;
 }
 
+}  // namespace lilygo
 }  // namespace eink
 
 #endif  // EINK_LILYGO

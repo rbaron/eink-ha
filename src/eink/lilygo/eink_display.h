@@ -11,6 +11,7 @@
 #define EINK_DISPLAY_HEIGHT EPD_HEIGHT
 
 namespace eink {
+namespace lilygo {
 
 class Display {
  public:
@@ -33,6 +34,7 @@ class Display {
   uint8_t* fb_;
 };
 
+}  // namespace lilygo
 }  // namespace eink
 
 #endif  // __EINK_DISPLAY__
