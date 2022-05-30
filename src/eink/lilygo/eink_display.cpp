@@ -4,10 +4,10 @@
 
 #include <Arduino.h>
 
-#include "Firasans.h"
-#include "opensans16.h"
-#include "opensans16b.h"
-#include "opensans24.h"
+#include "eink/lilygo/fonts/Firasans/Firasans.h"
+#include "eink/lilygo/fonts/OpenSans/opensans16.h"
+#include "eink/lilygo/fonts/OpenSans/opensans16b.h"
+#include "eink/lilygo/fonts/OpenSans/opensans24.h"
 
 namespace eink {
 namespace lilygo {
@@ -25,6 +25,7 @@ const EpdFont& GetFont(FontSize size) {
     case FontSize::Size24:
       return OpenSans24;
   }
+  Serial.printf("[eink_display] Unable to get font\n");
 }
 
 }  // namespace
@@ -32,8 +33,8 @@ const EpdFont& GetFont(FontSize size) {
 Display::Display() {
   epd_init(EPD_OPTIONS_DEFAULT);
   hl_ = epd_hl_init(EPD_BUILTIN_WAVEFORM);
-  // epd_set_rotation(EPD_ROT_INVERTED_PORTRAIT);
-  epd_set_rotation(EPD_ROT_PORTRAIT);
+  epd_set_rotation(EPD_ROT_INVERTED_PORTRAIT);
+  // epd_set_rotation(EPD_ROT_PORTRAIT);
   fb_ = epd_hl_get_framebuffer(&hl_);
   epd_clear();
 }

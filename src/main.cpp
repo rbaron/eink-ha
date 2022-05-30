@@ -67,8 +67,6 @@ void setup() {
   time_t t0 = millis();
 
   Serial.begin(115200);
-  while (!Serial)
-    ;
 
   adc_power_acquire();
 
@@ -100,7 +98,7 @@ void setup() {
   runner.Draw(data, t, runs);
 
   runs++;
-  // start_deep_sleep(&t);
+  start_deep_sleep(&t);
 }
 
 void loop() {}

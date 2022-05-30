@@ -77,9 +77,8 @@ int DrawHeader(eink::lilygo::Display &display, const struct tm &now, int y) {
   return y;
 }
 
-void DrawFooter(eink::lilygo::Display &display, time_t runtime_ms, int n_runs) {
-  std::string txt = "Run #" + to_fixed_str(n_runs) + " took " +
-                    to_fixed_str(runtime_ms / 1000.0, 1) + " s";
+void DrawFooter(eink::lilygo::Display &display, int n_runs) {
+  std::string txt = "Run #" + to_fixed_str(n_runs);
   display.DrawText(EINK_DISPLAY_WIDTH - kPadding,
                    EINK_DISPLAY_HEIGHT - kPadding, txt.c_str(), 0,
                    eink::FontSize::Size12, eink::DrawTextDirection::RTL);
@@ -203,7 +202,7 @@ void LilygoRunner::Draw(const eink::HAData &data, struct tm &now, int n_runs) {
   y = DrawWeather(display, data.weather, now_ts, y);
   y = DrawTempCO2(display, data.temp, data.co2, now_ts, y);
   y = DrawSoilMoistures(display, data.soil_moistures, now_ts, y);
-  DrawFooter(display, millis() - now_ts, n_runs);
+  DrawFooter(display, n_runs);
 
   Serial.printf("Before updating %ld\n", millis() - now_ts);
   display.Update();
