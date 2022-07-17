@@ -17,6 +17,9 @@
 #elif defined(EINK_TFT)
 #include "eink/tft/runner.h"
 #define Runner eink::tft::TFTRunner
+#elif defined(EINK_M5PAPER)
+#include "eink/m5paper/runner.h"
+#define Runner eink::m5paper::M5PaperRunner
 #else
 #error No runner defined
 #endif
@@ -72,6 +75,9 @@ void setup() {
 
   print_wakeup_reason();
 
+  Runner runner;
+  runner.Init();
+
   Serial.printf("Before wifi %ld\n", millis() - t0);
   if (eink::WiFiBegin(kWiFiSSID, kWiFiPass) != 0) {
     Serial.printf("Unable to connect to WiFi. Sleeping.\n");
@@ -93,7 +99,7 @@ void setup() {
   esp_wifi_stop();
   adc_power_release();
 
-  Runner runner;
+  // Runner runner;
 
   runner.Draw(data, t, runs);
 

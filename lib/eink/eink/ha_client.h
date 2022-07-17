@@ -4,6 +4,8 @@
 #include <WiFiClient.h>
 #include <time.h>
 
+#include <vector>
+
 #define EINK_HACLIENT_WAIT_TIMEOUT_MS 10000
 
 namespace eink {
