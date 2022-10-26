@@ -12,7 +12,7 @@
 #define STALE_THRESHOLD_S 2 * 3600
 #define STALE_COLOR 200
 
-#define SOIL_MOISTURE_ROWS 10
+#define SOIL_MOISTURE_ROWS 9
 #define SOIL_MOISTURE_COLS 2
 
 namespace eink {
@@ -107,6 +107,7 @@ int DrawSoilMoistures(eink::m5paper::Display &display,
   for (int i = 0; i < SOIL_MOISTURE_ROWS; i++) {
     display.DrawRect(y0 + i * row_height, 0, row_height, EINK_DISPLAY_HEIGHT,
                      i % 2 ? bg0 : bg1);
+    y_rows += row_height;
   }
 
   for (int i = 0; i < soil_moistures.size(); i++) {
@@ -119,6 +120,9 @@ int DrawSoilMoistures(eink::m5paper::Display &display,
     int y = y0 + kPadding + text_size + row * row_height;
 
     uint8_t bg_color = i % 2 ? bg0 : bg1;
+    Serial.printf("%s - diff: %d (last_updated: %d), %s\n", s.name.c_str(),
+                  now - s.last_updated, s.last_updated,
+                  ToHumanDiff(now - s.last_updated).c_str());
     uint8_t text_color = now - s.last_updated > 2 * 3600 ? STALE_COLOR : 0;
     display.DrawText(y, x, s.name.c_str(), text_color, eink::FontSize::Size12,
                      eink::DrawTextDirection::LTR, bg_color);
@@ -131,6 +135,32 @@ int DrawSoilMoistures(eink::m5paper::Display &display,
   }
 
   return y_rows + kPadding;
+}
+
+int DrawSolarLEDs(eink::m5paper::Display &display, const SolarLEDs &s,
+                  time_t now, int y0) {
+  int header_size = display.FontHeight(eink::FontSize::Size16);
+  int text_size = display.FontHeight(eink::FontSize::Size12);
+
+  display.DrawText(y0, kPadding, "Balcony Lights", 0, eink::FontSize::Size16b);
+  y0 += header_size + kPadding;
+  // y0 += kPadding;
+
+  const uint8_t bg = 254;
+
+  int row_height = 2 * kPadding + text_size;
+  display.DrawRect(y0, 0, row_height, EINK_DISPLAY_HEIGHT, bg);
+
+  uint8_t text_color = now - s.last_updated > 2 * 3600 ? STALE_COLOR : 0;
+
+  int y = y0 + kPadding + text_size;
+  std::string voltage = to_fixed_str(s.voltage, 2) + " V";
+  display.DrawText(y, kPadding, voltage.c_str(), text_color,
+                   eink::FontSize::Size12, eink::DrawTextDirection::LTR, bg);
+  std::string current = to_fixed_str(s.current, 2) + " mA";
+  display.DrawText(y, EINK_DISPLAY_HEIGHT / 2, current.c_str(), text_color,
+                   eink::FontSize::Size12, eink::DrawTextDirection::LTR, bg);
+  return y0 + row_height;
 }
 
 }  // namespace
@@ -153,6 +183,7 @@ void M5PaperRunner::Draw(const eink::HAData &data, struct tm &now, int n_runs) {
   y = DrawWeather(display_, data.weather, now_ts, y);
   y = DrawTempCO2(display_, data.temp, data.co2, now_ts, y);
   y = DrawSoilMoistures(display_, data.soil_moistures, now_ts, y);
+  y = DrawSolarLEDs(display_, data.solarleds, now_ts, y);
   DrawFooter(display_, n_runs);
 
   Serial.printf("Before updating %ld\n", millis() - now_ts);

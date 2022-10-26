@@ -33,11 +33,18 @@ struct CO2 {
   time_t last_updated;
 };
 
+struct SolarLEDs {
+  float voltage;
+  float current;
+  time_t last_updated;
+};
+
 struct HAData {
   std::vector<SoilMoisture> soil_moistures;
   Weather weather;
   CO2 co2;
   Temp temp;
+  SolarLEDs solarleds;
 };
 
 class HAClient {

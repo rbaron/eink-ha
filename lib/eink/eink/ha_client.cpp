@@ -25,10 +25,14 @@ SoilMoisture ParseSoilMoisture(const JsonObject& entity) {
     s.value = entity["state"].as<double>();
   }
 
+  // Dummy call to fix some weird bug.
   struct tm last_updated =
       ParseISODate(entity["last_updated"].as<const char*>());
-  Serial.printf("%s: %f (error: %s), last updated: %s\n", s.name.c_str(),
-                s.value, s.error.c_str(), FormatTime(last_updated).c_str());
+  last_updated = ParseISODate(entity["last_updated"].as<const char*>());
+  Serial.printf("%s: %f (error: %s), last updated: %s (parsed from: %s)\n",
+                s.name.c_str(), s.value, s.error.c_str(),
+                FormatTime(last_updated).c_str(),
+                entity["last_updated"].as<const char*>());
   s.last_updated = ToEpoch(last_updated);
   return s;
 }
@@ -66,6 +70,20 @@ void ParseTempData(const JsonObject& entity, Temp& res) {
                 FormatTime(last_updated).c_str());
 }
 
+void ParseSolarLEDsData(const JsonObject& entity, SolarLEDs& s) {
+  const std::string name = entity["entity_id"].as<std::string>();
+  if (name == "sensor.solarleds_bus_voltage") {
+    s.voltage = entity["state"].as<float>();
+    struct tm last_updated =
+        ParseISODate(entity["last_updated"].as<const char*>());
+    s.last_updated = ToEpoch(last_updated);
+    Serial.printf("Solarleds voltage: %f\n", s.voltage);
+  } else if (name == "sensor.solarleds_current") {
+    s.current = entity["state"].as<float>();
+    Serial.printf("Solarleds current: %f\n", s.current);
+  }
+}
+
 }  // namespace
 
 HAData HAClient::FetchData() {
@@ -97,6 +115,8 @@ HAData HAClient::FetchData() {
       ParseCO2Data(el.as<JsonObject>(), data.co2);
     } else if (entity_id == "sensor.living_room_temperature") {
       ParseTempData(el.as<JsonObject>(), data.temp);
+    } else if (entity_id.find("sensor.solarleds") != entity_id.npos) {
+      ParseSolarLEDsData(el.as<JsonObject>(), data.solarleds);
     }
   }
   std::sort(data.soil_moistures.begin(), data.soil_moistures.end(),
