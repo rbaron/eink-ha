@@ -96,7 +96,7 @@ int DrawSoilMoistures(eink::m5paper::Display &display,
   int header_size = display.FontHeight(eink::FontSize::Size16);
   int text_size = display.FontHeight(eink::FontSize::Size12);
 
-  display.DrawText(y0 + header_size + 2 * kPadding, kPadding, "b-parasites", 0,
+  display.DrawText(y0 + header_size + 1 * kPadding, kPadding, "b-parasites", 0,
                    eink::FontSize::Size16b);
   y0 += header_size + 2 * kPadding;
 
@@ -119,7 +119,7 @@ int DrawSoilMoistures(eink::m5paper::Display &display,
     int x = kPadding + col * EINK_DISPLAY_HEIGHT / SOIL_MOISTURE_COLS;
     int y = y0 + kPadding + text_size + row * row_height;
 
-    uint8_t bg_color = i % 2 ? bg0 : bg1;
+    uint8_t bg_color = row % 2 ? bg0 : bg1;
     Serial.printf("%s - diff: %d (last_updated: %d), %s\n", s.name.c_str(),
                   now - s.last_updated, s.last_updated,
                   ToHumanDiff(now - s.last_updated).c_str());
@@ -142,7 +142,8 @@ int DrawSolarLEDs(eink::m5paper::Display &display, const SolarLEDs &s,
   int header_size = display.FontHeight(eink::FontSize::Size16);
   int text_size = display.FontHeight(eink::FontSize::Size12);
 
-  display.DrawText(y0, kPadding, "Balcony Lights", 0, eink::FontSize::Size16b);
+  display.DrawText(y0 + header_size, kPadding, "Balcony Lights", 0,
+                   eink::FontSize::Size16b);
   y0 += header_size + kPadding;
   // y0 += kPadding;
 
