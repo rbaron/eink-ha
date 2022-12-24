@@ -50,7 +50,7 @@ struct HAData {
 class HAClient {
  public:
   HAClient(const char *url, const char *token) : url_(url), token_(token) {}
-  HAData FetchData();
+  void FetchData(eink::HAData &data);
 
  private:
   const std::string url_;

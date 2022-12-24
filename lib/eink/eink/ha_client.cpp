@@ -16,10 +16,12 @@ SoilMoisture ParseSoilMoisture(const JsonObject& entity) {
   SoilMoisture s;
   s.name = entity["attributes"]["friendly_name"].as<std::string>();
   s.name = s.name.substr(0, s.name.find(" Soil"));
+  s.name = s.name.substr(0, s.name.find(" Moisture"));
 
   auto state = entity["state"];
   if (state.as<std::string>() == "nan" ||
-      state.as<std::string>() == "unknown") {
+      state.as<std::string>() == "unknown" ||
+      state.as<std::string>() == "unavailable") {
     s.error = state.as<std::string>();
   } else {
     s.value = entity["state"].as<double>();
@@ -86,7 +88,7 @@ void ParseSolarLEDsData(const JsonObject& entity, SolarLEDs& s) {
 
 }  // namespace
 
-HAData HAClient::FetchData() {
+void HAClient::FetchData(HAData& data) {
   HTTPClient http;
   http.useHTTP10(true);
   std::string url = url_ + "/states";
@@ -101,11 +103,10 @@ HAData HAClient::FetchData() {
   deserializeJson(doc, http.getStream());
   Serial.printf("JSON: %d\n", doc.size());
 
-  HAData data;
   for (const auto& el : doc.as<JsonArray>()) {
     std::string entity_id(el["entity_id"].as<std::string>());
 
-    if (entity_id.find("soil_moisture") != entity_id.npos &&
+    if (entity_id.find("moisture") != entity_id.npos &&
         entity_id.find("test") == entity_id.npos) {
       data.soil_moistures.push_back(ParseSoilMoisture(el.as<JsonObject>()));
     } else if (entity_id.find("sensor.openweathermapzurich") !=
@@ -113,7 +114,7 @@ HAData HAClient::FetchData() {
       ParseWeatherData(el.as<JsonObject>(), data.weather);
     } else if (entity_id == "sensor.mh_z19_co2_value") {
       ParseCO2Data(el.as<JsonObject>(), data.co2);
-    } else if (entity_id == "sensor.living_room_temperature") {
+    } else if (entity_id == "sensor.atc_living_room_temperature") {
       ParseTempData(el.as<JsonObject>(), data.temp);
     } else if (entity_id.find("sensor.solarleds") != entity_id.npos) {
       ParseSolarLEDsData(el.as<JsonObject>(), data.solarleds);
@@ -129,8 +130,6 @@ HAData HAClient::FetchData() {
               }
               return lhs.value < rhs.value;
             });
-
-  return data;
 }
 
 }  // namespace eink

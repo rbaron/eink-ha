@@ -120,10 +120,11 @@ int DrawSoilMoistures(eink::m5paper::Display &display,
     int y = y0 + kPadding + text_size + row * row_height;
 
     uint8_t bg_color = row % 2 ? bg0 : bg1;
-    Serial.printf("%s - diff: %d (last_updated: %d), %s\n", s.name.c_str(),
-                  now - s.last_updated, s.last_updated,
-                  ToHumanDiff(now - s.last_updated).c_str());
-    uint8_t text_color = now - s.last_updated > 2 * 3600 ? STALE_COLOR : 0;
+    Serial.printf("%s - diff: %d (last_updated: %d), %s - error: %s\n",
+                  s.name.c_str(), now - s.last_updated, s.last_updated,
+                  ToHumanDiff(now - s.last_updated).c_str(), s.error.c_str());
+    uint8_t text_color =
+        (now - s.last_updated > 2 * 3600 || !s.error.empty()) ? STALE_COLOR : 0;
     display.DrawText(y, x, s.name.c_str(), text_color, eink::FontSize::Size12,
                      eink::DrawTextDirection::LTR, bg_color);
 
@@ -169,9 +170,9 @@ int DrawSolarLEDs(eink::m5paper::Display &display, const SolarLEDs &s,
 void M5PaperRunner::Init() {
   // Serial.println("[M5PaperRunner::Init()] Will init display");
   display_.Clear();
-  display_.DrawText(kPadding, kPadding, "Fetching data...", 0,
-                    eink::FontSize::Size12);
-  display_.Update();
+  // display_.DrawText(kPadding, kPadding, "Fetching data...", 0,
+  //                   eink::FontSize::Size12);
+  // display_.Update();
 }
 
 void M5PaperRunner::Draw(const eink::HAData &data, struct tm &now, int n_runs) {

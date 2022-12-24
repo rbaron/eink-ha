@@ -75,9 +75,6 @@ void setup() {
 
   print_wakeup_reason();
 
-  Runner runner;
-  runner.Init();
-
   Serial.printf("Before wifi %ld\n", millis() - t0);
   if (eink::WiFiBegin(kWiFiSSID, kWiFiPass) != 0) {
     Serial.printf("Unable to connect to WiFi. Sleeping.\n");
@@ -86,8 +83,12 @@ void setup() {
   Serial.printf("After wifi %ld\n", millis() - t0);
   eink::ConfigNTP();
 
+  eink::HAData data;
   eink::HAClient hacli(kHomeAssistantAPIUrl, kHomeAssistantToken);
-  eink::HAData data = hacli.FetchData();
+  hacli.FetchData(data);
+
+  eink::HAClient hacli2(kHomeAssistant2APIUrl, kHomeAssistant2Token);
+  hacli2.FetchData(data);
 
   Serial.printf("After getting data %ld\n", millis() - t0);
 
@@ -99,8 +100,8 @@ void setup() {
   esp_wifi_stop();
   adc_power_release();
 
-  // Runner runner;
-
+  Runner runner;
+  runner.Init();
   runner.Draw(data, t, runs);
 
   runs++;
